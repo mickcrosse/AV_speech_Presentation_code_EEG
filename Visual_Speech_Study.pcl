@@ -1,0 +1,207 @@
+#Define trial order
+int num_trials = 42;
+
+output_file out = new output_file;
+out.open("out.txt");  
+
+array <int> trial_index[num_trials];
+array <string> start_pics[num_trials];
+array <string> videos[num_trials];
+array <string> end_pics[num_trials];
+loop 
+	int i = 1 
+until 
+	i > 10
+begin
+	start_pics[i] = "obama_start_13.png";
+	videos[i] = "obama_avc_13.avi";
+	end_pics[i] = "obama_end_13.png";
+	trial_index[i] = 13;
+	i = i + 1;
+end;
+
+loop 
+	int i = 11 
+until 
+	i > 23
+begin
+	start_pics[i] = "obama_start_13.png";
+	videos[i] = "obama_v_13.avi";
+	end_pics[i] = "obama_end_13.png";
+	trial_index[i] = 13;
+	i = i + 2;
+end;
+
+int j = 1;
+loop 
+	int i = 12 
+until 
+	i > 24 
+begin
+	
+	start_pics[i] = "obama_start_" + string(j) + ".png";
+	videos[i] = "obama_v_" + string(j) + ".avi";
+	end_pics[i] = "obama_end_" + string(j) + ".png";
+	trial_index[i] = j;
+	i = i + 2;
+	j = j + 1;
+end;
+
+loop 
+	int i = 25 
+until 
+	i > 28
+begin
+	start_pics[i] = "obama_start_13.png";
+	videos[i] = "obama_avc_13.avi";
+	end_pics[i] = "obama_end_13.png";
+	trial_index[i] = 13;
+	i = i + 1;
+end;
+
+loop 
+	int i = 29 
+until 
+	i > 41
+begin
+	start_pics[i] = "obama_start_13.png";
+	videos[i] = "obama_v_13.avi";
+	end_pics[i] = "obama_end_13.png";
+	trial_index[i] = 13;
+	i = i + 2;
+end;
+
+j = 8;
+loop 
+	int i = 30 
+until 
+	i > 42 
+begin
+	if j == 13 then
+		j = j + 1;
+	end;
+	start_pics[i] = "obama_start_" + string(j) + ".png";
+	videos[i] = "obama_v_" + string(j) + ".avi";
+	end_pics[i] = "obama_end_" + string(j) + ".png";
+	trial_index[i] = j;
+	i = i + 2;
+	j = j + 1;
+end;
+
+loop 
+	int i = 1 
+until 
+	i > 42 
+begin
+	out.print(videos[i]);
+	out.print("\n");
+	i=i+1;
+end;
+out.close();
+
+#Define trial variables
+int current_time;
+
+#Define target variables
+int num_targets;
+int prev_num_targets;
+int total_targets = 0;
+int max_targets = 3;
+array <int> target_times[max_targets];
+string target_word;
+
+#Define response variables
+int hits;
+int total_hits = 0;
+int response_count;
+int response_time;
+
+#Loop through all 42 trials
+loop 
+	int i = 1
+until 
+	i > num_trials 
+begin
+	
+	#Load target time-stamps in array
+   input_file in = new input_file; 
+	in.open( "C://Users//eeglab//Desktop//Hesham//Imagined Speech Study//Targets//target_" + string(i) + ".txt" ); 
+	in.set_delimiter( '\n' ); 
+   loop 
+		j = 1
+	until 
+		j > max_targets + 2
+	begin
+		if j == 1 then
+			target_word = in.get_string();
+		elseif j == 2 then
+			num_targets = in.get_int();
+		else
+			target_times[j-2] = in.get_int();
+		end;
+		j = j + 1;
+   end;
+	in.close(); 
+	
+	#Initialise pictures and videos for trial
+	if i == 1 then
+		intro_txt.set_caption( "Trials remaining: " + string(num_trials-i+1) + "\n\nTarget word:\n" + target_word );
+	else
+		intro_txt.set_caption( "Targets hit: " + string(hits) + "/" + string(prev_num_targets) + "\n\nTrials remaining: " + string(num_trials-i+1) + "\n\nTarget word:\n" + target_word );
+	end;
+	intro_txt.redraw();
+	default_start_pic.set_filename( start_pics[i] ); default_start_pic.load();
+	vid.set_filename( videos[i] );
+	stim_event.set_event_code( string(i) + "," + string(trial_index[i]) );
+	stim_event.set_port_code( trial_index[i] );
+	default_end_pic.set_filename( end_pics[i] ); default_end_pic.load();
+	vid.prepare();
+	
+	#Present trials
+	intro_trial.present();
+	start_trial.present();
+	current_time = clock.time();
+	stim_trial.present();
+	vid.release();
+	
+	#Calculate hit rate
+	response_count = response_manager.total_response_count();
+	hits = 0;
+	loop 
+		j = 1 
+	until 
+		j > num_targets
+	begin
+		loop 
+			int k = 1 
+		until 
+			k > response_count
+		begin
+			response_time = response_manager.get_response_data(k).time() - current_time - 1000;
+			if response_time > target_times[j] && response_time < target_times[j] + 2000 then
+				hits = hits + 1;	
+				k = response_count + 1;
+			else
+				k = k + 1;
+			end;
+		end;	
+		j = j + 1;	
+	end;
+	total_hits = total_hits + hits;
+	total_targets = total_targets + num_targets;
+	prev_num_targets = num_targets;
+	
+	
+	#Stop recording
+	stop_trial.present();
+
+	#Present finish trial at end
+	if i == num_trials then
+		finish_txt.set_caption( "Targets hit: " + string(hits) + "/" + string(prev_num_targets) + "\n\nTotal targets hit: " + string(total_hits) + "/" + string(total_targets) + "\n\nYou are finished.\nThank you." );
+		finish_txt.redraw ();
+		finish_trial.present();
+	end;
+	
+	i = i + 1;
+	
+end;

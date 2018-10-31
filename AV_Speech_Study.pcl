@@ -1,0 +1,197 @@
+#Randomise trial order
+int num_trials = 105;
+array <int> trial_order[num_trials];
+loop 
+	int i = 1 
+until 
+	i > num_trials 
+begin
+	trial_order[i] = i;
+	i = i + 1;
+end;
+trial_order.shuffle();
+
+#Adjust target order
+preset int target_offset;
+array <int> target_order[num_trials];
+loop 
+	int i = 1 
+until 
+	i > num_trials 
+begin
+	if trial_order[i] + target_offset <= num_trials then
+		target_order[i] = trial_order[i] + target_offset;
+	else
+		target_order[i] = trial_order[i] + target_offset - num_trials;
+	end;
+	i = i + 1;
+end;
+
+#Output trial order
+output_file out = new output_file; 
+out.open( logfile.subject() + "-trial_order.txt" ); 
+out.print( "Run\tTrial\tTarget\n" );
+loop 
+	int i = 1 
+until 
+	i > num_trials 
+begin
+	out.print( string(i) + "\t" + string(trial_order[i]) + "\t" + string(target_order[i]) + "\n" ); 
+	i = i + 1;
+end;
+out.close();
+
+#Generate array of stimuli names
+array <string> start_pics[num_trials];
+array <string> videos[num_trials];
+array <string> end_pics[num_trials];
+loop 
+	int i = 1 
+until 
+	i > num_trials 
+begin
+	if i >= 1  && i <= 15 then
+		start_pics[i] = "crosshair.png";
+		videos[i] = "obama_a_" + string(i) + ".avi";
+		end_pics[i] = "crosshair.png";
+	elseif i >= 16  && i <= 30 then
+		start_pics[i] = "obama_start_" + string(i-15) + ".png";
+		videos[i] = "obama_v_" + string(i-15) + ".avi";
+		end_pics[i] = "obama_end_" + string(i-15) + ".png";
+	elseif i >= 31  && i <= 45 then
+		start_pics[i] = "obama_start_" + string(i-30) + ".png";
+		videos[i] = "obama_avc_" + string(i-30) + ".avi";
+		end_pics[i] = "obama_end_" + string(i-30) + ".png";
+	elseif i >= 46  && i < 60 then
+		start_pics[i] = "obama_start_" + string(i-45+1) + ".png";
+		videos[i] = "obama_avi_" + string(i-45) + ".avi";
+		end_pics[i] = "obama_end_" + string(i-45+1) + ".png";
+	elseif i == 60 then
+		start_pics[i] = "obama_start_" + string(1) + ".png";
+		videos[i] = "obama_avi_" + string(15) + ".avi";
+		end_pics[i] = "obama_end_" + string(1) + ".png";
+	elseif i >= 61  && i <= 75 then
+		start_pics[i] = "female_start_" + string(i-60) + ".png";
+		videos[i] = "female_avi_" + string(i-60) + ".avi";
+		end_pics[i] = "female_end_" + string(i-60) + ".png";
+	elseif i >= 76  && i <= 90 then
+		start_pics[i] = "wildlife_start_" + string(i-75) + ".png";
+		videos[i] = "wildlife_avi_" + string(i-75) + ".avi";
+		end_pics[i] = "wildlife_end_" + string(i-75) + ".png";
+	elseif i >= 91  && i <= num_trials then
+		start_pics[i] = "obama_start_" + string(i-90) + ".png";
+		videos[i] = "obama_sf_" + string(i-90) + ".avi";
+		end_pics[i] = "obama_start_" + string(i-90) + ".png";
+	end;
+	i = i + 1;
+end;
+
+#Define trial variables
+int run;
+int current_time;
+
+#Define target variables
+int target;
+int num_targets;
+int prev_num_targets;
+int total_targets = 0;
+int max_targets = 3;
+array <int> target_times[max_targets];
+string target_word;
+
+#Define response variables
+int hits;
+int total_hits = 0;
+int response_count;
+int response_time;
+
+#Loop through all 105 trials
+loop 
+	int i = 1
+until 
+	i > num_trials 
+begin
+	
+	#Define trial and target index
+	run = trial_order[i];
+	target = target_order[i];
+	
+	#Load target time-stamps in array
+   input_file in = new input_file; 
+	in.open( "C://Users//TCDUSER//Documents//Experiments//Incongruent Speech Study//Targets//target_" + string(target) + ".txt" ); 
+	in.set_delimiter( '\n' ); 
+   loop 
+		int j = 1
+	until 
+		j > max_targets + 2
+	begin
+		if j == 1 then
+			target_word = in.get_string();
+		elseif j == 2 then
+			num_targets = in.get_int();
+		else
+			target_times[j-2] = in.get_int();
+		end;
+		j = j + 1;
+   end;
+	in.close(); 
+	
+	#Initialise pictures and videos for trial
+	if i == 1 then
+		intro_txt.set_caption( "Trials remaining: " + string(num_trials-i+1) + "\n\nTarget word:\n" + target_word );
+	else
+		intro_txt.set_caption( "Targets hit: " + string(hits) + "/" + string(prev_num_targets) + "\n\nTrials remaining: " + string(num_trials-i+1) + "\n\nTarget word:\n" + target_word );
+	end;
+	intro_txt.redraw();
+	default_start_pic.set_filename( start_pics[run] ); default_start_pic.load();
+	vid.set_filename( videos[run] );
+	stim_event.set_event_code( string(run) + "," + string(target) );
+	stim_event.set_port_code( run );
+	default_end_pic.set_filename( end_pics[run] ); default_end_pic.load();
+	vid.prepare();
+	
+	#Present trials
+	intro_trial.present();
+	start_trial.present();
+	current_time = clock.time();
+	stim_trial.present();
+	vid.release();
+	stop_trial.present();
+
+	#Calculate hit rate
+	response_count = response_manager.total_response_count();
+	hits = 0;
+	loop 
+		int j = 1 
+	until 
+		j > num_targets
+	begin
+		loop 
+			int k = 1 
+		until 
+			k > response_count
+		begin
+			response_time = response_manager.get_response_data(k).time() - current_time - 1000;
+			if response_time > target_times[j] && response_time < target_times[j] + 2000 then
+				hits = hits + 1;	
+				k = response_count + 1;
+			else
+				k = k + 1;
+			end;
+		end;	
+		j = j + 1;	
+	end;
+	total_hits = total_hits + hits;
+	total_targets = total_targets + num_targets;
+	prev_num_targets = num_targets;
+	
+	#Present finish trial at end
+	if i == num_trials then
+		finish_txt.set_caption( "Targets hit: " + string(hits) + "/" + string(prev_num_targets) + "\n\nTotal targets hit: " + string(total_hits) + "/" + string(total_targets) + "\n\nYou are finished.\nThank you." );
+		finish_txt.redraw ();
+		finish_trial.present();
+	end;
+	
+	i = i + 1;
+	
+end;
